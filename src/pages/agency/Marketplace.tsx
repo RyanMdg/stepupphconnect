@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bookmark, Loader2, MapPin, Search, XCircle } from "lucide-react";
+import { Bookmark, Loader2, MapPin, Search, Wallet, XCircle } from "lucide-react";
 import { Avatar } from "../../components/shared/Avatar";
 import { Btn } from "../../components/shared/Btn";
 import { Card } from "../../components/shared/Card";
@@ -9,6 +9,7 @@ import type { CandidateRecord } from "../../services/candidateService";
 import {
   createCandidateRequest,
   getCurrentAgencyProfile,
+  getAgencyWallet,
   getMarketplaceCandidates,
   getSavedCandidateIds,
   saveCandidate,
@@ -25,6 +26,7 @@ const emptyRequest = {
 export function CandidateMarketplace() {
   const navigate = useNavigate();
   const [agencyId, setAgencyId] = useState("");
+  const [walletBalance, setWalletBalance] = useState(0);
   const [candidates, setCandidates] = useState<CandidateRecord[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
@@ -52,10 +54,14 @@ export function CandidateMarketplace() {
           getCurrentAgencyProfile(),
           getMarketplaceCandidates(),
         ]);
-        const saved = await getSavedCandidateIds(agency.id);
+        const [saved, wallet] = await Promise.all([
+          getSavedCandidateIds(agency.id),
+          getAgencyWallet(agency.id),
+        ]);
 
         if (!active) return;
         setAgencyId(agency.id);
+        setWalletBalance(wallet.balance);
         setCandidates(candidateRows);
         setSavedIds(saved);
       } catch {
@@ -174,30 +180,54 @@ export function CandidateMarketplace() {
         offeredSalary: requestForm.offeredSalary.trim(),
         urgency: requestForm.urgency,
       });
+      setWalletBalance(
+        (current) => current - getCandidateCreditCost(selectedCandidate),
+      );
       setSuccess(`${selectedCandidate.name} request submitted to Step Up PH.`);
       setSelectedCandidate(null);
       setRequestForm(emptyRequest);
     } catch {
-      setError("Unable to submit request. Run the updated Supabase SQL policies.");
+      setError(
+        "Unable to submit request. Check your credit balance or Supabase SQL policies.",
+      );
     } finally {
       setSaving(false);
     }
   }
 
+  function getCandidateCreditCost(candidate: CandidateRecord) {
+    const storedCost = (candidate as CandidateRecord & { credit_cost?: number })
+      .credit_cost;
+    if (storedCost && storedCost > 0) return storedCost;
+    return Math.max(10, Math.ceil(candidate.readiness_score / 5) * 5);
+  }
+
   return (
     <div className="p-6 space-y-4 max-w-screen-xl">
-      <div>
-        <h2
-          className="text-base font-semibold text-[#222222]"
-          style={{
-            fontFamily: '"Poppins", sans-serif',
-          }}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2
+            className="text-base font-semibold text-[#222222]"
+            style={{
+              fontFamily: '"Poppins", sans-serif',
+            }}
+          >
+            Candidate Marketplace
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {filtered.length} job-ready candidates available from Step Up PH
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate("/wallet")}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-[#222222] shadow-sm transition hover:border-[#A10000]/30 hover:text-[#A10000]"
         >
-          Candidate Marketplace
-        </h2>
-        <p className="text-xs text-gray-500 mt-0.5">
-          {filtered.length} job-ready candidates available from Step Up PH
-        </p>
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-50 text-[#A10000]">
+            <Wallet size={13} strokeWidth={1.8} />
+          </span>
+          <span>{walletBalance} credits</span>
+        </button>
       </div>
 
       {(error || success) && (
@@ -285,6 +315,8 @@ export function CandidateMarketplace() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((candidate) => {
             const isSaved = savedIds.includes(candidate.id);
+            const creditCost = getCandidateCreditCost(candidate);
+            const hasEnoughCredits = walletBalance >= creditCost;
 
             return (
               <Card
@@ -332,6 +364,10 @@ export function CandidateMarketplace() {
                     <div className="flex items-center gap-1 mt-1 text-[10px] text-gray-400">
                       <MapPin size={10} />
                       {candidate.province ?? "No location"}
+                    </div>
+                    <div className="mt-2 inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-600 shadow-sm">
+                      <Wallet size={10} className="text-[#A10000]" />
+                      {creditCost} credits to request
                     </div>
                   </div>
                 </div>
@@ -383,7 +419,7 @@ export function CandidateMarketplace() {
                     className="flex-1 justify-center"
                     onClick={() => openRequest(candidate)}
                   >
-                    Request
+                    {hasEnoughCredits ? "Request" : "Top Up"}
                   </Btn>
                 </div>
               </Card>
@@ -438,6 +474,21 @@ export function CandidateMarketplace() {
                   <div className="text-xs text-gray-500">
                     {selectedCandidate.title ?? "No title"}
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-[#FAFAFA] px-3 py-3 text-xs text-gray-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-gray-500">Request cost</span>
+                  <span className="font-bold text-[#222222]">
+                    {getCandidateCreditCost(selectedCandidate)} credits
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-3 text-gray-500">
+                  <span>Your balance</span>
+                  <span className="font-semibold text-[#222222]">
+                    {walletBalance} credits
+                  </span>
                 </div>
               </div>
 
@@ -525,12 +576,28 @@ export function CandidateMarketplace() {
                 </Btn>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={
+                    saving ||
+                    walletBalance < getCandidateCreditCost(selectedCandidate)
+                  }
                   className="inline-flex flex-1 items-center justify-center rounded-lg bg-[#A10000] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#8a0000] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saving ? "Submitting..." : "Submit Request"}
+                  {walletBalance < getCandidateCreditCost(selectedCandidate)
+                    ? "Need Credits"
+                    : saving
+                      ? "Submitting..."
+                      : "Submit Request"}
                 </button>
               </div>
+              {walletBalance < getCandidateCreditCost(selectedCandidate) && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/wallet")}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-[#222222] shadow-sm hover:border-[#A10000]/30 hover:text-[#A10000]"
+                >
+                  Top Up Wallet
+                </button>
+              )}
             </form>
           </Card>
         </div>

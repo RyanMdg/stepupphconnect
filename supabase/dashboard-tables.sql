@@ -66,6 +66,10 @@ create table if not exists public.candidates (
 alter table public.candidates
   add column if not exists resume_url text;
 
+alter table public.candidates
+  add column if not exists credit_cost integer not null default 25
+  check (credit_cost > 0);
+
 create table if not exists public.employers (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -127,6 +131,24 @@ create table if not exists public.agency_saved_candidates (
   primary key (agency_id, candidate_id)
 );
 
+create table if not exists public.agency_wallets (
+  agency_id uuid primary key references public.agencies(id) on delete cascade,
+  balance integer not null default 0 check (balance >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.agency_wallet_transactions (
+  id uuid primary key default gen_random_uuid(),
+  agency_id uuid not null references public.agencies(id) on delete cascade,
+  amount integer not null,
+  type text not null check (type in ('topup', 'request_debit', 'refund', 'adjustment')),
+  description text,
+  endorsement_id uuid references public.endorsements(id) on delete set null,
+  candidate_id uuid references public.candidates(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.activity_feed (
   id uuid primary key default gen_random_uuid(),
   type text not null check (type in ('endorsed', 'hired', 'registered', 'request', 'completed')),
@@ -144,6 +166,7 @@ create index if not exists endorsements_stage_idx on public.endorsements(stage);
 create index if not exists endorsements_created_at_idx on public.endorsements(created_at);
 create index if not exists agency_requests_status_idx on public.agency_requests(status);
 create index if not exists agency_saved_candidates_candidate_idx on public.agency_saved_candidates(candidate_id);
+create index if not exists agency_wallet_transactions_agency_idx on public.agency_wallet_transactions(agency_id, created_at desc);
 
 alter table public.admins enable row level security;
 alter table public.agencies enable row level security;
@@ -154,6 +177,8 @@ alter table public.endorsements enable row level security;
 alter table public.agency_requests enable row level security;
 alter table public.activity_feed enable row level security;
 alter table public.agency_saved_candidates enable row level security;
+alter table public.agency_wallets enable row level security;
+alter table public.agency_wallet_transactions enable row level security;
 
 create or replace function public.is_active_admin()
 returns boolean
@@ -192,6 +217,164 @@ as $$
 $$;
 
 grant execute on function public.is_current_agency(uuid) to authenticated;
+
+create or replace function public.get_candidate_credit_cost(target_candidate_id uuid)
+returns integer
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select credit_cost
+      from public.candidates
+      where id = target_candidate_id
+    ),
+    25
+  );
+$$;
+
+grant execute on function public.get_candidate_credit_cost(uuid) to authenticated;
+
+create or replace function public.request_candidate_with_credits(
+  target_agency_id uuid,
+  target_candidate_id uuid,
+  request_position text,
+  request_notes text,
+  request_salary text,
+  request_urgency text
+)
+returns public.endorsements
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  request_cost integer;
+  current_balance integer;
+  created_request public.endorsements;
+begin
+  if not public.is_current_agency(target_agency_id) then
+    raise exception 'Agency account is not allowed to request for this agency.';
+  end if;
+
+  select public.get_candidate_credit_cost(target_candidate_id)
+  into request_cost;
+
+  insert into public.agency_wallets (agency_id, balance)
+  values (target_agency_id, 0)
+  on conflict (agency_id) do nothing;
+
+  select balance
+  into current_balance
+  from public.agency_wallets
+  where agency_id = target_agency_id
+  for update;
+
+  if current_balance < request_cost then
+    raise exception 'Insufficient credits. This candidate requires % credits.', request_cost;
+  end if;
+
+  update public.agency_wallets
+  set
+    balance = balance - request_cost,
+    updated_at = now()
+  where agency_id = target_agency_id;
+
+  insert into public.endorsements (
+    agency_id,
+    candidate_id,
+    stage,
+    position,
+    offered_salary,
+    urgency,
+    notes
+  )
+  values (
+    target_agency_id,
+    target_candidate_id,
+    'requested',
+    nullif(request_position, ''),
+    nullif(request_salary, ''),
+    coalesce(nullif(request_urgency, ''), 'normal'),
+    nullif(request_notes, '')
+  )
+  returning * into created_request;
+
+  insert into public.agency_wallet_transactions (
+    agency_id,
+    amount,
+    type,
+    description,
+    endorsement_id,
+    candidate_id
+  )
+  values (
+    target_agency_id,
+    -request_cost,
+    'request_debit',
+    'Candidate request credit deduction',
+    created_request.id,
+    target_candidate_id
+  );
+
+  return created_request;
+end;
+$$;
+
+grant execute on function public.request_candidate_with_credits(uuid, uuid, text, text, text, text) to authenticated;
+
+create or replace function public.top_up_agency_wallet(
+  target_agency_id uuid,
+  credit_amount integer,
+  topup_description text
+)
+returns public.agency_wallets
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_wallet public.agency_wallets;
+begin
+  if not public.is_current_agency(target_agency_id) then
+    raise exception 'Agency account is not allowed to top up this wallet.';
+  end if;
+
+  if credit_amount <= 0 then
+    raise exception 'Credit amount must be greater than zero.';
+  end if;
+
+  insert into public.agency_wallets (agency_id, balance)
+  values (target_agency_id, 0)
+  on conflict (agency_id) do nothing;
+
+  update public.agency_wallets
+  set
+    balance = balance + credit_amount,
+    updated_at = now()
+  where agency_id = target_agency_id
+  returning * into updated_wallet;
+
+  insert into public.agency_wallet_transactions (
+    agency_id,
+    amount,
+    type,
+    description
+  )
+  values (
+    target_agency_id,
+    credit_amount,
+    'topup',
+    coalesce(nullif(topup_description, ''), 'Agency wallet top-up')
+  );
+
+  return updated_wallet;
+end;
+$$;
+
+grant execute on function public.top_up_agency_wallet(uuid, integer, text) to authenticated;
 
 drop policy if exists "admins can read admin profiles" on public.admins;
 create policy "admins can read admin profiles"
@@ -276,6 +459,19 @@ to authenticated
 using (public.is_active_admin())
 with check (public.is_active_admin());
 
+drop policy if exists "agencies can update own shortlisted requests" on public.endorsements;
+create policy "agencies can update own shortlisted requests"
+on public.endorsements for update
+to authenticated
+using (
+  public.is_current_agency(agency_id)
+  and stage in ('shortlisted', 'interview', 'interviewed', 'offered')
+)
+with check (
+  public.is_current_agency(agency_id)
+  and stage in ('interview', 'offered', 'hired', 'rejected')
+);
+
 drop policy if exists "admins can delete endorsements" on public.endorsements;
 create policy "admins can delete endorsements"
 on public.endorsements for delete
@@ -302,6 +498,37 @@ create policy "agencies can remove own saved candidates"
 on public.agency_saved_candidates for delete
 to authenticated
 using (public.is_current_agency(agency_id));
+
+drop policy if exists "agencies can read own wallets" on public.agency_wallets;
+create policy "agencies can read own wallets"
+on public.agency_wallets for select
+to authenticated
+using (
+  public.is_active_admin()
+  or public.is_current_agency(agency_id)
+);
+
+drop policy if exists "admins can manage agency wallets" on public.agency_wallets;
+create policy "admins can manage agency wallets"
+on public.agency_wallets for all
+to authenticated
+using (public.is_active_admin())
+with check (public.is_active_admin());
+
+drop policy if exists "agencies can read own wallet transactions" on public.agency_wallet_transactions;
+create policy "agencies can read own wallet transactions"
+on public.agency_wallet_transactions for select
+to authenticated
+using (
+  public.is_active_admin()
+  or public.is_current_agency(agency_id)
+);
+
+drop policy if exists "admins can insert wallet transactions" on public.agency_wallet_transactions;
+create policy "admins can insert wallet transactions"
+on public.agency_wallet_transactions for insert
+to authenticated
+with check (public.is_active_admin());
 
 drop policy if exists "authenticated can read agency requests" on public.agency_requests;
 create policy "authenticated can read agency requests"

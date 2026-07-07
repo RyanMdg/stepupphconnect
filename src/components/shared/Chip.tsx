@@ -64,5 +64,42 @@ export function StatusChip({ status }: { status: string }) {
       </Chip>
     );
   if (status === "inactive") return <Chip variant="gray">Inactive</Chip>;
+  if (status === "requested")
+    return (
+      <Chip variant="warning">
+        <Clock size={10} />
+        Requested
+      </Chip>
+    );
+  if (status === "shortlisted")
+    return (
+      <Chip variant="info">
+        <CheckCircle size={10} />
+        Shortlisted
+      </Chip>
+    );
+  if (status === "interview" || status === "interviewed")
+    return (
+      <Chip variant="purple">
+        <Clock size={10} />
+        Interview
+      </Chip>
+    );
+  if (status === "offered")
+    return (
+      <Chip variant="primary">
+        <Award size={10} />
+        Offered
+      </Chip>
+    );
+  if (status === "hired")
+    return (
+      <Chip variant="success">
+        <Award size={10} />
+        Hired
+      </Chip>
+    );
+  if (status === "rejected")
+    return <Chip variant="danger">Rejected</Chip>;
   return <Chip>{status}</Chip>;
 }

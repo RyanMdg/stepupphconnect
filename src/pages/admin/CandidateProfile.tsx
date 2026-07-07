@@ -11,6 +11,7 @@ import {
   Send,
   FileText,
   MessageSquare,
+  Wallet,
 } from "lucide-react";
 import { PieChart, Pie, Cell } from "recharts";
 import { Card } from "../../components/shared/Card";
@@ -147,6 +148,10 @@ export function CandidateProfile({
                     Job Ready
                   </Chip>
                 )}
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700">
+                  <Wallet size={12} className="text-[#A10000]" />
+                  {c.credit_cost ?? 25} credits
+                </span>
               </div>
               <p className="text-sm text-gray-500 mt-0.5">
                 {c.title ?? "No title"} · {c.program ?? "No program"}
@@ -416,6 +421,7 @@ export function CandidateProfile({
                 ["Availability", c.availability ?? "Not set"],
                 ["Preferred Work", c.preferred_work ?? "Not set"],
                 ["Expected Salary", c.expected_salary ?? "Not set"],
+                ["Request Cost", `${c.credit_cost ?? 25} credits`],
                 ["Location", c.province ?? "Not set"],
                 ["English Level", c.english_level ?? "Not set"],
                 ["Experience", c.experience ?? "Not set"],

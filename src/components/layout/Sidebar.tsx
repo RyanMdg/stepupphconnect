@@ -10,6 +10,7 @@ import {
   Bookmark,
   FileText,
   Layers,
+  Wallet,
 } from "lucide-react";
 import type { Role } from "../../types";
 import { RED } from "../../lib/constants";
@@ -82,6 +83,11 @@ const agencyNav = [
     icon: <FileText size={15} />,
     label: "My Requests",
     page: "requests",
+  },
+  {
+    icon: <Wallet size={15} />,
+    label: "Credit Wallet",
+    page: "wallet",
   },
   {
     icon: <MessageSquare size={15} />,

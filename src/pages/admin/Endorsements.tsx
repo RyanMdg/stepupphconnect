@@ -34,6 +34,16 @@ const emptyForm = {
   notes: "",
 };
 
+const adminReviewStages = [
+  { id: "requested" as const, label: "Requested" },
+  { id: "shortlisted" as const, label: "Shortlisted" },
+  { id: "rejected" as const, label: "Rejected" },
+];
+
+function isAgencyManagedStage(stage: PipelineStage) {
+  return ["interview", "offered", "hired"].includes(stage);
+}
+
 function normalizeStage(stage: EndorsementStage): PipelineStage {
   if (stage === "interviewed") return "interview";
   if (stage === "endorsed") return "requested";
@@ -196,7 +206,7 @@ export function EndorsementKanban() {
             Endorsement Pipeline
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Track candidates through every stage of placement
+            Review agency requests, then agencies update interview, offer, and hire stages
           </p>
         </div>
         <Btn onClick={openModal}>
@@ -302,23 +312,29 @@ export function EndorsementKanban() {
                           <span className="text-[10px] text-gray-400">
                             {formatDate(card.updated_at ?? card.created_at)}
                           </span>
-                          <select
-                            value={normalizeStage(card.stage)}
-                            onChange={(event) =>
-                              handleStageChange(
-                                card.id,
-                                event.target.value as PipelineStage,
-                              )
-                            }
-                            className="h-7 max-w-[104px] rounded-md border border-gray-200 bg-white px-1.5 text-[10px] font-medium text-gray-600 outline-none focus:border-[#A10000]"
-                            aria-label={`Move ${candidateName} to another stage`}
-                          >
-                            {pipelineColumns.map((stage) => (
-                              <option key={stage.id} value={stage.id}>
-                                {stage.label}
-                              </option>
-                            ))}
-                          </select>
+                          {isAgencyManagedStage(normalizeStage(card.stage)) ? (
+                            <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-[10px] font-medium text-gray-500">
+                              Agency updated
+                            </span>
+                          ) : (
+                            <select
+                              value={normalizeStage(card.stage)}
+                              onChange={(event) =>
+                                handleStageChange(
+                                  card.id,
+                                  event.target.value as PipelineStage,
+                                )
+                              }
+                              className="h-7 max-w-[104px] rounded-md border border-gray-200 bg-white px-1.5 text-[10px] font-medium text-gray-600 outline-none focus:border-[#A10000]"
+                              aria-label={`Review request for ${candidateName}`}
+                            >
+                              {adminReviewStages.map((stage) => (
+                                <option key={stage.id} value={stage.id}>
+                                  {stage.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                       </div>
                     );

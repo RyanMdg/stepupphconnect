@@ -20,6 +20,7 @@ export type CandidateRecord = {
   expected_salary: string | null;
   preferred_work: string | null;
   resume_url: string | null;
+  credit_cost?: number;
   created_at: string;
   updated_at: string;
 };
@@ -41,6 +42,7 @@ export type CandidateInput = {
   expected_salary?: string | null;
   preferred_work?: string | null;
   resume_url?: string | null;
+  credit_cost?: number;
 };
 
 export type CandidateFilters = {
@@ -67,6 +69,7 @@ const candidateColumns = `
   expected_salary,
   preferred_work,
   resume_url,
+  credit_cost,
   created_at,
   updated_at
 `;
@@ -88,11 +91,33 @@ const candidateColumnsWithoutResume = `
   phone,
   expected_salary,
   preferred_work,
+  credit_cost,
   created_at,
   updated_at
 `;
 
-function isMissingResumeColumn(error: unknown) {
+const candidateColumnsLegacy = `
+  id,
+  name,
+  photo,
+  title,
+  program,
+  skills,
+  experience,
+  english_level,
+  status,
+  readiness_score,
+  availability,
+  province,
+  email,
+  phone,
+  expected_salary,
+  preferred_work,
+  created_at,
+  updated_at
+`;
+
+function isMissingColumn(error: unknown, column: string) {
   return (
     typeof error === "object" &&
     error !== null &&
@@ -101,16 +126,33 @@ function isMissingResumeColumn(error: unknown) {
     (error as { code?: string; message?: string }).code === "42703" &&
     Boolean(
       (error as { message?: string }).message?.includes(
-        "candidates.resume_url",
+        `candidates.${column}`,
       ),
     )
   );
+}
+
+function isMissingResumeColumn(error: unknown) {
+  return isMissingColumn(error, "resume_url");
+}
+
+function isMissingCreditCostColumn(error: unknown) {
+  return isMissingColumn(error, "credit_cost");
 }
 
 function withResumeFallback<T extends Partial<CandidateRecord>>(rows: T[]) {
   return rows.map((row) => ({
     ...row,
     resume_url: row.resume_url ?? null,
+    credit_cost: row.credit_cost ?? 25,
+  })) as CandidateRecord[];
+}
+
+function withLegacyFallback<T extends Partial<CandidateRecord>>(rows: T[]) {
+  return rows.map((row) => ({
+    ...row,
+    resume_url: row.resume_url ?? null,
+    credit_cost: row.credit_cost ?? 25,
   })) as CandidateRecord[];
 }
 
@@ -146,11 +188,40 @@ export async function getCandidates(filters: CandidateFilters = {}) {
     );
 
     if (fallback.error) {
+      if (isMissingCreditCostColumn(fallback.error)) {
+        const legacyFallback = await buildCandidateQuery(
+          candidateColumnsLegacy,
+          filters,
+        );
+
+        if (legacyFallback.error) {
+          console.error(legacyFallback.error);
+          throw legacyFallback.error;
+        }
+
+        return withLegacyFallback(
+          ((legacyFallback.data ?? []) as unknown) as Partial<CandidateRecord>[],
+        );
+      }
+
       console.error(fallback.error);
       throw fallback.error;
     }
 
     return withResumeFallback(
+      ((fallback.data ?? []) as unknown) as Partial<CandidateRecord>[],
+    );
+  }
+
+  if (isMissingCreditCostColumn(error)) {
+    const fallback = await buildCandidateQuery(candidateColumnsLegacy, filters);
+
+    if (fallback.error) {
+      console.error(fallback.error);
+      throw fallback.error;
+    }
+
+    return withLegacyFallback(
       ((fallback.data ?? []) as unknown) as Partial<CandidateRecord>[],
     );
   }
@@ -178,12 +249,54 @@ export async function getCandidate(id: string) {
       .maybeSingle<Omit<CandidateRecord, "resume_url">>();
 
     if (fallback.error) {
+      if (isMissingCreditCostColumn(fallback.error)) {
+        const legacyFallback = await supabase
+          .from("candidates")
+          .select(candidateColumnsLegacy)
+          .eq("id", id)
+          .maybeSingle<Omit<CandidateRecord, "resume_url" | "credit_cost">>();
+
+        if (legacyFallback.error) {
+          console.error(legacyFallback.error);
+          throw legacyFallback.error;
+        }
+
+        return legacyFallback.data
+          ? ({
+              ...legacyFallback.data,
+              resume_url: null,
+              credit_cost: 25,
+            } as CandidateRecord)
+          : null;
+      }
+
       console.error(fallback.error);
       throw fallback.error;
     }
 
     return fallback.data
       ? ({ ...fallback.data, resume_url: null } as CandidateRecord)
+      : null;
+  }
+
+  if (isMissingCreditCostColumn(error)) {
+    const fallback = await supabase
+      .from("candidates")
+      .select(candidateColumnsLegacy)
+      .eq("id", id)
+      .maybeSingle<Omit<CandidateRecord, "resume_url" | "credit_cost">>();
+
+    if (fallback.error) {
+      console.error(fallback.error);
+      throw fallback.error;
+    }
+
+    return fallback.data
+      ? ({
+          ...fallback.data,
+          resume_url: null,
+          credit_cost: 25,
+        } as CandidateRecord)
       : null;
   }
 
@@ -225,11 +338,56 @@ export async function createCandidate(values: CandidateInput) {
       .single();
 
     if (fallback.error) {
+      if (isMissingCreditCostColumn(fallback.error)) {
+        const { credit_cost: _creditCost, ...legacyValues } =
+          valuesWithoutResume;
+        const legacyFallback = await supabase
+          .from("candidates")
+          .insert(legacyValues)
+          .select(candidateColumnsLegacy)
+          .single();
+
+        if (legacyFallback.error) {
+          console.error(legacyFallback.error);
+          throw legacyFallback.error;
+        }
+
+        return {
+          ...legacyFallback.data,
+          resume_url: null,
+          credit_cost: 25,
+        } as CandidateRecord;
+      }
+
       console.error(fallback.error);
       throw fallback.error;
     }
 
     return { ...fallback.data, resume_url: null } as CandidateRecord;
+  }
+
+  if (isMissingCreditCostColumn(error)) {
+    const {
+      resume_url: _resumeUrl,
+      credit_cost: _creditCost,
+      ...legacyValues
+    } = values;
+    const fallback = await supabase
+      .from("candidates")
+      .insert(legacyValues)
+      .select(candidateColumnsLegacy)
+      .single();
+
+    if (fallback.error) {
+      console.error(fallback.error);
+      throw fallback.error;
+    }
+
+    return {
+      ...fallback.data,
+      resume_url: null,
+      credit_cost: 25,
+    } as CandidateRecord;
   }
 
   if (error) {
@@ -258,11 +416,58 @@ export async function updateCandidate(id: string, values: CandidateInput) {
       .single();
 
     if (fallback.error) {
+      if (isMissingCreditCostColumn(fallback.error)) {
+        const { credit_cost: _creditCost, ...legacyValues } =
+          valuesWithoutResume;
+        const legacyFallback = await supabase
+          .from("candidates")
+          .update({ ...legacyValues, updated_at: new Date().toISOString() })
+          .eq("id", id)
+          .select(candidateColumnsLegacy)
+          .single();
+
+        if (legacyFallback.error) {
+          console.error(legacyFallback.error);
+          throw legacyFallback.error;
+        }
+
+        return {
+          ...legacyFallback.data,
+          resume_url: null,
+          credit_cost: 25,
+        } as CandidateRecord;
+      }
+
       console.error(fallback.error);
       throw fallback.error;
     }
 
     return { ...fallback.data, resume_url: null } as CandidateRecord;
+  }
+
+  if (isMissingCreditCostColumn(error)) {
+    const {
+      resume_url: _resumeUrl,
+      credit_cost: _creditCost,
+      ...legacyValues
+    } = values;
+    const fallback = await supabase
+      .from("candidates")
+      .update({ ...legacyValues, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select(candidateColumnsLegacy)
+      .single();
+
+    if (fallback.error) {
+      console.error(fallback.error);
+      throw fallback.error;
+    }
+
+    return {
+      ...fallback.data,
+      resume_url: null,
+      credit_cost: 25,
+    } as CandidateRecord;
   }
 
   if (error) {

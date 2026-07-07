@@ -23,6 +23,7 @@ import { AgencyDashboard } from "./pages/agency/Dashboard";
 import { CandidateMarketplace } from "./pages/agency/Marketplace";
 import { SavedCandidatesPage } from "./pages/agency/SavedCandidates";
 import { MyRequestsPage } from "./pages/agency/MyRequests";
+import { AgencyWalletPage } from "./pages/agency/Wallet";
 import { Placeholder } from "./pages/Placeholder";
 import { getCurrentRole, signOut } from "./services/authService";
 
@@ -98,6 +99,7 @@ function AppShell({
     marketplace: "Candidate Marketplace",
     saved: "Saved Candidates",
     requests: "My Requests",
+    wallet: "Credit Wallet",
   };
 
   const currentTitle = pageTitle[pageKey] ?? pageKey;
@@ -144,6 +146,7 @@ function AppShell({
                 />
                 <Route path="/saved" element={<SavedCandidatesPage />} />
                 <Route path="/requests" element={<MyRequestsPage />} />
+                <Route path="/wallet" element={<AgencyWalletPage />} />
                 <Route
                   path="*"
                   element={

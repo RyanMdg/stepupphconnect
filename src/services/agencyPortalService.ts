@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabase";
 import type { CandidateRecord } from "./candidateService";
 import type { Agency } from "./agencyService";
-import type { EndorsementRecord } from "./endorsementService";
+import type { EndorsementRecord, EndorsementStage } from "./endorsementService";
 
 const candidateColumns = `
   id,
@@ -21,6 +21,7 @@ const candidateColumns = `
   expected_salary,
   preferred_work,
   resume_url,
+  credit_cost,
   created_at,
   updated_at
 `;
@@ -42,6 +43,7 @@ const candidateColumnsWithoutResume = `
   phone,
   expected_salary,
   preferred_work,
+  credit_cost,
   created_at,
   updated_at
 `;
@@ -82,6 +84,29 @@ export type AgencyRequestInput = {
   reason: string;
   offeredSalary: string;
   urgency: string;
+};
+
+export type AgencyWallet = {
+  agency_id: string;
+  balance: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AgencyWalletTransaction = {
+  id: string;
+  agency_id: string;
+  amount: number;
+  type: "topup" | "request_debit" | "refund" | "adjustment";
+  description: string | null;
+  endorsement_id: string | null;
+  candidate_id: string | null;
+  created_at: string;
+};
+
+export type AgencyRequestStageUpdate = {
+  stage: Extract<EndorsementStage, "interview" | "offered" | "hired" | "rejected">;
+  note?: string;
 };
 
 function isMissingResumeColumn(error: unknown) {
@@ -242,18 +267,29 @@ export async function createCandidateRequest(
   agencyId: string,
   values: AgencyRequestInput,
 ) {
+  const { data: createdRequest, error: requestError } = await supabase.rpc(
+    "request_candidate_with_credits",
+    {
+      target_agency_id: agencyId,
+      target_candidate_id: values.candidateId,
+      request_position: values.position,
+      request_notes: values.reason,
+      request_salary: values.offeredSalary,
+      request_urgency: values.urgency,
+    },
+  );
+
+  if (requestError) {
+    console.error(requestError);
+    throw requestError;
+  }
+
+  const requestId = (createdRequest as { id: string }).id;
+
   const { data, error } = await supabase
     .from("endorsements")
-    .insert({
-      agency_id: agencyId,
-      candidate_id: values.candidateId,
-      stage: "requested",
-      position: values.position,
-      offered_salary: values.offeredSalary || null,
-      urgency: values.urgency,
-      notes: values.reason || null,
-    })
     .select(requestColumns)
+    .eq("id", requestId)
     .single();
 
   if (error) {
@@ -277,4 +313,91 @@ export async function getAgencyCandidateRequests(agencyId: string) {
   }
 
   return (((data ?? []) as unknown) as RawRequest[]).map(normalizeRequest);
+}
+
+export async function updateAgencyCandidateRequest(
+  id: string,
+  values: AgencyRequestStageUpdate,
+) {
+  const updates: {
+    stage: AgencyRequestStageUpdate["stage"];
+    updated_at: string;
+    notes?: string;
+  } = {
+    stage: values.stage,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (values.note?.trim()) {
+    updates.notes = values.note.trim();
+  }
+
+  const { data, error } = await supabase
+    .from("endorsements")
+    .update(updates)
+    .eq("id", id)
+    .select(requestColumns)
+    .single();
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return normalizeRequest((data as unknown) as RawRequest);
+}
+
+export async function getAgencyWallet(agencyId: string) {
+  const { data, error } = await supabase
+    .from("agency_wallets")
+    .select("*")
+    .eq("agency_id", agencyId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return (data ??
+    {
+      agency_id: agencyId,
+      balance: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }) as AgencyWallet;
+}
+
+export async function getAgencyWalletTransactions(agencyId: string) {
+  const { data, error } = await supabase
+    .from("agency_wallet_transactions")
+    .select("*")
+    .eq("agency_id", agencyId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return (data ?? []) as AgencyWalletTransaction[];
+}
+
+export async function createTopUpRequest(
+  agencyId: string,
+  amount: number,
+  note: string,
+) {
+  const { error } = await supabase.rpc("top_up_agency_wallet", {
+    target_agency_id: agencyId,
+    credit_amount: amount,
+    topup_description: note || `Agency wallet top-up for ${amount} credits`,
+  });
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return true;
 }

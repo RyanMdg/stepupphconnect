@@ -6,6 +6,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Wallet,
   XCircle,
 } from "lucide-react";
 import { Card } from "../../components/shared/Card";
@@ -42,6 +43,7 @@ type CandidateFormState = {
   preferred_work: string;
   photo: string;
   resume_url: string;
+  credit_cost: string;
 };
 
 const emptyForm: CandidateFormState = {
@@ -61,6 +63,7 @@ const emptyForm: CandidateFormState = {
   preferred_work: "",
   photo: "",
   resume_url: "",
+  credit_cost: "25",
 };
 
 function formatDate(value: string) {
@@ -89,6 +92,7 @@ function formFromCandidate(candidate: CandidateRecord): CandidateFormState {
     preferred_work: candidate.preferred_work ?? "",
     photo: candidate.photo ?? "",
     resume_url: candidate.resume_url ?? "",
+    credit_cost: String(candidate.credit_cost ?? 25),
   };
 }
 
@@ -116,6 +120,7 @@ function toCandidateInput(form: CandidateFormState): CandidateInput {
     preferred_work: form.preferred_work.trim() || null,
     photo: form.photo || null,
     resume_url: form.resume_url || null,
+    credit_cost: Math.max(Number(form.credit_cost || 25), 1),
   };
 }
 
@@ -349,6 +354,7 @@ export function CandidateList({
                   "English Level",
                   "Status",
                   "Readiness",
+                  "Request Cost",
                   "Availability",
                   "Updated",
                   "",
@@ -358,7 +364,7 @@ export function CandidateList({
                     className={`text-left px-4 py-2.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider ${
                       i === 2 || i === 3
                         ? "hidden lg:table-cell"
-                        : i === 6 || i === 7
+                        : i === 7 || i === 8
                           ? "hidden xl:table-cell"
                           : ""
                     }`}
@@ -372,7 +378,7 @@ export function CandidateList({
               {loading && (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-12 text-center text-sm text-gray-400"
                   >
                     Loading candidates...
@@ -382,7 +388,7 @@ export function CandidateList({
               {!loading && error && (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-12 text-center text-sm text-red-500"
                   >
                     {error}
@@ -437,6 +443,12 @@ export function CandidateList({
                   <td className="px-4 py-3 w-28">
                     <ReadinessBar score={c.readiness_score} />
                   </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700">
+                      <Wallet size={12} className="text-[#A10000]" />
+                      {c.credit_cost ?? 25} credits
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-xs text-gray-600 hidden xl:table-cell">
                     {c.availability ?? "Not set"}
                   </td>
@@ -472,7 +484,7 @@ export function CandidateList({
               {!loading && !error && candidates.length === 0 && (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-12 text-center text-sm text-gray-400"
                   >
                     No candidates match your filters.
@@ -607,6 +619,33 @@ export function CandidateList({
                     }
                     className="w-full px-3 py-2.5 text-sm border border-[#E5E7EB] rounded-xl outline-none focus:border-[#A10000]"
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1.5">
+                    Request Credit Cost
+                  </label>
+                  <div className="relative">
+                    <Wallet
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A10000]"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.credit_cost}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          credit_cost: e.target.value,
+                        }))
+                      }
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-[#E5E7EB] rounded-xl outline-none focus:border-[#A10000]"
+                      placeholder="25"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Higher cost signals stronger candidate quality.
+                  </p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1.5">

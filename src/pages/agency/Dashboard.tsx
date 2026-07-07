@@ -32,6 +32,34 @@ function stageLabel(stage: string) {
   return stage.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function nextStep(stage: string) {
+  if (stage === "requested" || stage === "endorsed") {
+    return "Waiting for Step Up PH review.";
+  }
+
+  if (stage === "shortlisted") {
+    return "You can contact the candidate for interview.";
+  }
+
+  if (stage === "interview" || stage === "interviewed") {
+    return "Interview is in progress. Update after feedback.";
+  }
+
+  if (stage === "offered") {
+    return "Mark hired once placement is confirmed.";
+  }
+
+  if (stage === "hired") {
+    return "Placement completed.";
+  }
+
+  if (stage === "rejected") {
+    return "Request closed.";
+  }
+
+  return "Step Up PH will update this request.";
+}
+
 export function AgencyDashboard() {
   const [agency, setAgency] = useState<Agency | null>(null);
   const [candidates, setCandidates] = useState<CandidateRecord[]>([]);
@@ -221,6 +249,9 @@ export function AgencyDashboard() {
                       <div className="text-[10px] text-gray-400 truncate">
                         {request.position || request.candidate?.title || "Requested role"} ·{" "}
                         {formatShortDate(request.created_at)}
+                      </div>
+                      <div className="mt-0.5 text-[10px] font-medium text-gray-500">
+                        {nextStep(request.stage)}
                       </div>
                     </div>
                     <StatusChip status={request.stage} />
