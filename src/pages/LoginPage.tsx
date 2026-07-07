@@ -80,7 +80,7 @@ export function LoginPage({ onLogin }: { onLogin: (role: Role) => void }) {
               <div
                 className="text-white font-bold text-[15px] leading-tight"
                 style={{
-                  fontFamily: '"Plus Jakarta Sans", sans-serif',
+                  fontFamily: '"Poppins", sans-serif',
                 }}
               >
                 StepUpConnect
@@ -99,7 +99,7 @@ export function LoginPage({ onLogin }: { onLogin: (role: Role) => void }) {
             <h1
               className="text-white text-4xl xl:text-5xl font-bold leading-tight mb-4"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Quality candidates.
@@ -123,7 +123,7 @@ export function LoginPage({ onLogin }: { onLogin: (role: Role) => void }) {
                   <div
                     className="text-white text-xl font-bold tabular-nums"
                     style={{
-                      fontFamily: '"Plus Jakarta Sans", sans-serif',
+                      fontFamily: '"Poppins", sans-serif',
                     }}
                   >
                     {val}
@@ -144,7 +144,7 @@ export function LoginPage({ onLogin }: { onLogin: (role: Role) => void }) {
             <h2
               className="text-2xl font-bold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Welcome back

@@ -56,7 +56,7 @@ export function AgenciesPage({
           <h2
             className="text-base font-semibold text-[#222222]"
             style={{
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Poppins", sans-serif',
             }}
           >
             Partner Agencies

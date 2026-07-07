@@ -123,7 +123,7 @@ export function AgencyProfile({
               <div className="flex flex-wrap items-center gap-2">
                 <h2
                   className="text-xl font-bold text-[#222222]"
-                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                  style={{ fontFamily: '"Poppins", sans-serif' }}
                 >
                   {agency.name}
                 </h2>
@@ -201,7 +201,7 @@ export function AgencyProfile({
         <Card className="p-5">
           <h3
             className="text-sm font-semibold text-[#222222] mb-4"
-            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            style={{ fontFamily: '"Poppins", sans-serif' }}
           >
             Specializations
           </h3>
@@ -224,7 +224,7 @@ export function AgencyProfile({
         <Card className="p-5">
           <h3
             className="text-sm font-semibold text-[#222222] mb-4"
-            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            style={{ fontFamily: '"Poppins", sans-serif' }}
           >
             Contact Details
           </h3>

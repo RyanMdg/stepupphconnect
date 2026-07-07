@@ -20,7 +20,7 @@ export function ReportsPage() {
         <h2
           className="text-base font-semibold text-[#222222]"
           style={{
-            fontFamily: '"Plus Jakarta Sans", sans-serif',
+            fontFamily: '"Poppins", sans-serif',
           }}
         >
           Reports & Analytics
@@ -57,7 +57,7 @@ export function ReportsPage() {
             <div
               className="text-xl font-bold text-[#A10000] tabular-nums"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               {s.value}
@@ -75,7 +75,7 @@ export function ReportsPage() {
           <p
             className="text-sm font-semibold text-[#222222] mb-1"
             style={{
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Poppins", sans-serif',
             }}
           >
             Top Candidate Skills
@@ -130,7 +130,7 @@ export function ReportsPage() {
           <p
             className="text-sm font-semibold text-[#222222] mb-1"
             style={{
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Poppins", sans-serif',
             }}
           >
             Placement Rate Trend
@@ -187,7 +187,7 @@ export function ReportsPage() {
           <p
             className="text-sm font-semibold text-[#222222] mb-1"
             style={{
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Poppins", sans-serif',
             }}
           >
             Top Agencies by Placements
@@ -230,7 +230,7 @@ export function ReportsPage() {
           <p
             className="text-sm font-semibold text-[#222222] mb-1"
             style={{
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Poppins", sans-serif',
             }}
           >
             Average Hiring Timeline
@@ -252,7 +252,7 @@ export function ReportsPage() {
                 <div
                   className="text-2xl font-bold text-[#A10000]"
                   style={{
-                    fontFamily: '"Plus Jakarta Sans", sans-serif',
+                    fontFamily: '"Poppins", sans-serif',
                   }}
                 >
                   {item.days}d
@@ -270,7 +270,7 @@ export function ReportsPage() {
             <span
               className="text-lg font-bold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               19.6 days

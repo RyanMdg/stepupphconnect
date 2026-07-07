@@ -151,7 +151,7 @@ export function SuperAdminDashboard() {
             <p
               className="text-sm font-semibold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Monthly Candidate Growth
@@ -219,7 +219,7 @@ export function SuperAdminDashboard() {
             <p
               className="text-sm font-semibold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Endorsements per Month
@@ -280,7 +280,7 @@ export function SuperAdminDashboard() {
             <p
               className="text-sm font-semibold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Hiring Conversion Pipeline
@@ -337,7 +337,7 @@ export function SuperAdminDashboard() {
             <p
               className="text-sm font-semibold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Training Completion
@@ -372,7 +372,7 @@ export function SuperAdminDashboard() {
                 <span
                   className="text-xl font-bold text-[#222222]"
                   style={{
-                    fontFamily: '"Plus Jakarta Sans", sans-serif',
+                    fontFamily: '"Poppins", sans-serif',
                   }}
                 >
                   {completionPercent}%
@@ -417,7 +417,7 @@ export function SuperAdminDashboard() {
           <p
             className="text-sm font-semibold text-[#222222] mb-3"
             style={{
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Poppins", sans-serif',
             }}
           >
             Recent Activity
@@ -465,7 +465,7 @@ export function SuperAdminDashboard() {
             <p
               className="text-sm font-semibold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Latest Candidates
@@ -500,7 +500,7 @@ export function SuperAdminDashboard() {
             <p
               className="text-sm font-semibold text-[#222222]"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Pending Requests

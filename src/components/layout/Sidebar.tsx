@@ -124,7 +124,7 @@ export function Sidebar({
           <div
             className="text-sm font-bold text-[#222222] leading-tight"
             style={{
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Poppins", sans-serif',
             }}
           >
             StepUpConnect

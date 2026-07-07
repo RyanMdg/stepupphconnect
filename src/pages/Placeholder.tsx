@@ -8,7 +8,7 @@ export function Placeholder({ title }: { title: string }) {
       <h2
         className="text-base font-semibold text-[#222222] mb-4"
         style={{
-          fontFamily: '"Plus Jakarta Sans", sans-serif',
+          fontFamily: '"Poppins", sans-serif',
         }}
       >
         {title}

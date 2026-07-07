@@ -193,7 +193,7 @@ export function PortalAccessPage() {
         <div>
           <h2
             className="text-base font-semibold text-[#222222]"
-            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            style={{ fontFamily: '"Poppins", sans-serif' }}
           >
             Portal Access
           </h2>
@@ -451,7 +451,7 @@ export function PortalAccessPage() {
               <div>
                 <h3
                   className="font-bold text-[#222222]"
-                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                  style={{ fontFamily: '"Poppins", sans-serif' }}
                 >
                   Register Admin
                 </h3>
@@ -584,7 +584,7 @@ export function PortalAccessPage() {
               <div>
                 <h3
                   className="font-bold text-[#222222]"
-                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                  style={{ fontFamily: '"Poppins", sans-serif' }}
                 >
                   Register Agency
                 </h3>

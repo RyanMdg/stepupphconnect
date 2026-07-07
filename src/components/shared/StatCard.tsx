@@ -30,7 +30,7 @@ export function StatCard({
       <div
         className="text-2xl font-bold text-[#222222] tabular-nums"
         style={{
-          fontFamily: '"Plus Jakarta Sans", sans-serif',
+          fontFamily: '"Poppins", sans-serif',
         }}
       >
         {value}

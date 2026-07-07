@@ -21,6 +21,8 @@ import { EndorsementKanban } from "./pages/admin/Endorsements";
 import { ReportsPage } from "./pages/admin/Reports";
 import { AgencyDashboard } from "./pages/agency/Dashboard";
 import { CandidateMarketplace } from "./pages/agency/Marketplace";
+import { SavedCandidatesPage } from "./pages/agency/SavedCandidates";
+import { MyRequestsPage } from "./pages/agency/MyRequests";
 import { Placeholder } from "./pages/Placeholder";
 import { getCurrentRole, signOut } from "./services/authService";
 
@@ -54,6 +56,17 @@ function AgencyProfilePage() {
     <AgencyProfile
       agencyId={id ?? ""}
       onBack={() => navigate("/agencies")}
+    />
+  );
+}
+
+function AgencyCandidateProfilePage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  return (
+    <CandidateProfile
+      candidateId={id ?? ""}
+      onBack={() => navigate("/marketplace")}
     />
   );
 }
@@ -125,6 +138,12 @@ function AppShell({
               <>
                 <Route path="/dashboard" element={<AgencyDashboard />} />
                 <Route path="/marketplace" element={<CandidateMarketplace />} />
+                <Route
+                  path="/candidates/:id"
+                  element={<AgencyCandidateProfilePage />}
+                />
+                <Route path="/saved" element={<SavedCandidatesPage />} />
+                <Route path="/requests" element={<MyRequestsPage />} />
                 <Route
                   path="*"
                   element={

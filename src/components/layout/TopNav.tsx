@@ -15,7 +15,7 @@ export function TopNav({ title, role }: { title: string; role: Role }) {
       <h1
         className="text-[15px] font-semibold text-[#222222]"
         style={{
-          fontFamily: '"Plus Jakarta Sans", sans-serif',
+          fontFamily: '"Poppins", sans-serif',
         }}
       >
         {title}

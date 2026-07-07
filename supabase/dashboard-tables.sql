@@ -58,9 +58,13 @@ create table if not exists public.candidates (
   phone text,
   expected_salary text,
   preferred_work text,
+  resume_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.candidates
+  add column if not exists resume_url text;
 
 create table if not exists public.employers (
   id uuid primary key default gen_random_uuid(),
@@ -79,12 +83,30 @@ create table if not exists public.endorsements (
   candidate_id uuid references public.candidates(id) on delete cascade,
   agency_id uuid references public.agencies(id) on delete set null,
   employer_id uuid references public.employers(id) on delete set null,
-  stage text not null default 'endorsed'
-    check (stage in ('endorsed', 'shortlisted', 'interviewed', 'offered', 'hired', 'rejected')),
+  stage text not null default 'requested'
+    check (stage in ('available', 'requested', 'shortlisted', 'interview', 'interviewed', 'offered', 'hired', 'rejected', 'endorsed')),
+  position text,
+  offered_salary text,
+  urgency text not null default 'normal',
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.endorsements
+  add column if not exists position text,
+  add column if not exists offered_salary text,
+  add column if not exists urgency text not null default 'normal';
+
+alter table public.endorsements
+  alter column stage set default 'requested';
+
+alter table public.endorsements
+  drop constraint if exists endorsements_stage_check;
+
+alter table public.endorsements
+  add constraint endorsements_stage_check
+  check (stage in ('available', 'requested', 'shortlisted', 'interview', 'interviewed', 'offered', 'hired', 'rejected', 'endorsed'));
 
 create table if not exists public.agency_requests (
   id uuid primary key default gen_random_uuid(),
@@ -96,6 +118,13 @@ create table if not exists public.agency_requests (
   status text not null default 'pending' check (status in ('pending', 'approved', 'declined')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists public.agency_saved_candidates (
+  agency_id uuid not null references public.agencies(id) on delete cascade,
+  candidate_id uuid not null references public.candidates(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (agency_id, candidate_id)
 );
 
 create table if not exists public.activity_feed (
@@ -114,6 +143,7 @@ create index if not exists candidates_created_at_idx on public.candidates(create
 create index if not exists endorsements_stage_idx on public.endorsements(stage);
 create index if not exists endorsements_created_at_idx on public.endorsements(created_at);
 create index if not exists agency_requests_status_idx on public.agency_requests(status);
+create index if not exists agency_saved_candidates_candidate_idx on public.agency_saved_candidates(candidate_id);
 
 alter table public.admins enable row level security;
 alter table public.agencies enable row level security;
@@ -123,6 +153,7 @@ alter table public.employers enable row level security;
 alter table public.endorsements enable row level security;
 alter table public.agency_requests enable row level security;
 alter table public.activity_feed enable row level security;
+alter table public.agency_saved_candidates enable row level security;
 
 create or replace function public.is_active_admin()
 returns boolean
@@ -140,6 +171,27 @@ as $$
 $$;
 
 grant execute on function public.is_active_admin() to authenticated;
+
+create or replace function public.is_current_agency(target_agency_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.agencies
+    where id = target_agency_id
+    and status = 'active'
+    and (
+      auth_id = auth.uid()
+      or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    )
+  );
+$$;
+
+grant execute on function public.is_current_agency(uuid) to authenticated;
 
 drop policy if exists "admins can read admin profiles" on public.admins;
 create policy "admins can read admin profiles"
@@ -168,6 +220,25 @@ on public.candidates for select
 to authenticated
 using (true);
 
+drop policy if exists "admins can insert candidates" on public.candidates;
+create policy "admins can insert candidates"
+on public.candidates for insert
+to authenticated
+with check (public.is_active_admin());
+
+drop policy if exists "admins can update candidates" on public.candidates;
+create policy "admins can update candidates"
+on public.candidates for update
+to authenticated
+using (public.is_active_admin())
+with check (public.is_active_admin());
+
+drop policy if exists "admins can delete candidates" on public.candidates;
+create policy "admins can delete candidates"
+on public.candidates for delete
+to authenticated
+using (public.is_active_admin());
+
 drop policy if exists "authenticated can read employers" on public.employers;
 create policy "authenticated can read employers"
 on public.employers for select
@@ -178,7 +249,59 @@ drop policy if exists "authenticated can read endorsements" on public.endorsemen
 create policy "authenticated can read endorsements"
 on public.endorsements for select
 to authenticated
-using (true);
+using (
+  public.is_active_admin()
+  or public.is_current_agency(agency_id)
+);
+
+drop policy if exists "admins can insert endorsements" on public.endorsements;
+create policy "admins can insert endorsements"
+on public.endorsements for insert
+to authenticated
+with check (public.is_active_admin());
+
+drop policy if exists "agencies can create own candidate requests" on public.endorsements;
+create policy "agencies can create own candidate requests"
+on public.endorsements for insert
+to authenticated
+with check (
+  public.is_current_agency(agency_id)
+  and stage = 'requested'
+);
+
+drop policy if exists "admins can update endorsements" on public.endorsements;
+create policy "admins can update endorsements"
+on public.endorsements for update
+to authenticated
+using (public.is_active_admin())
+with check (public.is_active_admin());
+
+drop policy if exists "admins can delete endorsements" on public.endorsements;
+create policy "admins can delete endorsements"
+on public.endorsements for delete
+to authenticated
+using (public.is_active_admin());
+
+drop policy if exists "agencies can read own saved candidates" on public.agency_saved_candidates;
+create policy "agencies can read own saved candidates"
+on public.agency_saved_candidates for select
+to authenticated
+using (
+  public.is_active_admin()
+  or public.is_current_agency(agency_id)
+);
+
+drop policy if exists "agencies can save own candidates" on public.agency_saved_candidates;
+create policy "agencies can save own candidates"
+on public.agency_saved_candidates for insert
+to authenticated
+with check (public.is_current_agency(agency_id));
+
+drop policy if exists "agencies can remove own saved candidates" on public.agency_saved_candidates;
+create policy "agencies can remove own saved candidates"
+on public.agency_saved_candidates for delete
+to authenticated
+using (public.is_current_agency(agency_id));
 
 drop policy if exists "authenticated can read agency requests" on public.agency_requests;
 create policy "authenticated can read agency requests"
@@ -235,6 +358,7 @@ insert into public.candidates (
   phone,
   expected_salary,
   preferred_work,
+  resume_url,
   created_at,
   updated_at
 )
@@ -257,6 +381,7 @@ from (
       '+63 912 345 6789',
       'PHP 25,000-30,000',
       'Remote',
+      null,
       now() - interval '20 days',
       now() - interval '2 days'
     ),
@@ -276,6 +401,7 @@ from (
       '+63 917 234 5678',
       'PHP 22,000-26,000',
       'On-site',
+      null,
       now() - interval '18 days',
       now() - interval '4 days'
     ),
@@ -295,6 +421,7 @@ from (
       '+63 918 345 6789',
       'PHP 28,000-35,000',
       'Hybrid',
+      null,
       now() - interval '16 days',
       now() - interval '1 day'
     ),
@@ -314,6 +441,7 @@ from (
       '+63 919 456 7890',
       'PHP 20,000-24,000',
       'On-site',
+      null,
       now() - interval '15 days',
       now() - interval '8 days'
     ),
@@ -333,6 +461,7 @@ from (
       '+63 920 567 8901',
       'PHP 20,000-24,000',
       'Remote',
+      null,
       now() - interval '14 days',
       now() - interval '3 days'
     ),
@@ -352,6 +481,7 @@ from (
       '+63 921 678 9012',
       'PHP 30,000-38,000',
       'On-site',
+      null,
       now() - interval '45 days',
       now() - interval '22 days'
     ),
@@ -371,6 +501,7 @@ from (
       '+63 922 789 0123',
       'PHP 18,000-22,000',
       'Remote',
+      null,
       now() - interval '12 days',
       now() - interval '10 days'
     ),
@@ -390,6 +521,7 @@ from (
       '+63 923 890 1234',
       'PHP 20,000-25,000',
       'On-site',
+      null,
       now() - interval '10 days',
       now() - interval '5 days'
     )
@@ -409,6 +541,7 @@ from (
   phone,
   expected_salary,
   preferred_work,
+  resume_url,
   created_at,
   updated_at
 )
@@ -416,4 +549,45 @@ where not exists (
   select 1
   from public.candidates c
   where c.email = seed_candidates.email
+);
+
+insert into storage.buckets (id, name, public)
+values ('candidate-files', 'candidate-files', true)
+on conflict (id) do update set public = excluded.public;
+
+drop policy if exists "authenticated can read candidate files" on storage.objects;
+create policy "authenticated can read candidate files"
+on storage.objects for select
+to authenticated
+using (bucket_id = 'candidate-files');
+
+drop policy if exists "admins can upload candidate files" on storage.objects;
+create policy "admins can upload candidate files"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'candidate-files'
+  and public.is_active_admin()
+);
+
+drop policy if exists "admins can update candidate files" on storage.objects;
+create policy "admins can update candidate files"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'candidate-files'
+  and public.is_active_admin()
+)
+with check (
+  bucket_id = 'candidate-files'
+  and public.is_active_admin()
+);
+
+drop policy if exists "admins can delete candidate files" on storage.objects;
+create policy "admins can delete candidate files"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'candidate-files'
+  and public.is_active_admin()
 );

@@ -132,7 +132,7 @@ export function CandidateProfile({
                 <h2
                   className="text-xl font-bold text-[#222222]"
                   style={{
-                    fontFamily: '"Plus Jakarta Sans", sans-serif',
+                    fontFamily: '"Poppins", sans-serif',
                   }}
                 >
                   {c.name}
@@ -168,10 +168,22 @@ export function CandidateProfile({
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Btn variant="outline">
-              <Download size={13} />
-              Download Resume
-            </Btn>
+            {c.resume_url ? (
+              <a
+                href={c.resume_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 font-medium rounded-lg transition-colors cursor-pointer border border-[#E5E7EB] text-gray-600 hover:bg-gray-50 text-sm px-4 py-2"
+              >
+                <Download size={13} />
+                Download Resume
+              </a>
+            ) : (
+              <Btn variant="outline">
+                <Download size={13} />
+                No Resume
+              </Btn>
+            )}
             <Btn>
               <Send size={13} />
               Endorse Candidate
@@ -224,7 +236,7 @@ export function CandidateProfile({
                     <h4
                       className="text-sm font-semibold text-[#222222] mb-2"
                       style={{
-                        fontFamily: '"Plus Jakarta Sans", sans-serif',
+                        fontFamily: '"Poppins", sans-serif',
                       }}
                     >
                       About
@@ -243,7 +255,7 @@ export function CandidateProfile({
                     <h4
                       className="text-sm font-semibold text-[#222222] mb-2"
                       style={{
-                        fontFamily: '"Plus Jakarta Sans", sans-serif',
+                        fontFamily: '"Poppins", sans-serif',
                       }}
                     >
                       Core Skills
@@ -264,7 +276,7 @@ export function CandidateProfile({
                       <h4
                         className="text-sm font-semibold text-[#222222] mb-2"
                         style={{
-                          fontFamily: '"Plus Jakarta Sans", sans-serif',
+                          fontFamily: '"Poppins", sans-serif',
                         }}
                       >
                         Employment History
@@ -285,7 +297,7 @@ export function CandidateProfile({
                       <h4
                         className="text-sm font-semibold text-[#222222] mb-2"
                         style={{
-                          fontFamily: '"Plus Jakarta Sans", sans-serif',
+                          fontFamily: '"Poppins", sans-serif',
                         }}
                       >
                         Education
@@ -322,7 +334,7 @@ export function CandidateProfile({
             <h4
               className="text-sm font-semibold text-[#222222] mb-3"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Readiness Score
@@ -353,7 +365,7 @@ export function CandidateProfile({
                   <span
                     className="text-lg font-bold text-[#222222]"
                     style={{
-                      fontFamily: '"Plus Jakarta Sans", sans-serif',
+                      fontFamily: '"Poppins", sans-serif',
                     }}
                   >
                     {c.readiness_score}
@@ -394,7 +406,7 @@ export function CandidateProfile({
             <h4
               className="text-sm font-semibold text-[#222222] mb-3"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Details
@@ -424,7 +436,7 @@ export function CandidateProfile({
             <h4
               className="text-sm font-semibold text-[#222222] mb-3"
               style={{
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontFamily: '"Poppins", sans-serif',
               }}
             >
               Quick Actions
